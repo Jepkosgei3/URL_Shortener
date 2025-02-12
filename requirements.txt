@@ -1,0 +1,11 @@
+asgiref==3.8.1
+certifi==2024.8.30
+charset-normalizer
+Django
+idna==3.10
+pyperclip
+pyshorteners
+requests
+sqlparse
+tzdata==2024.2
+urllib3
