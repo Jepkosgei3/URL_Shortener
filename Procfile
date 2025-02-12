@@ -1,1 +1,1 @@
-web: gunicorn url_shortener.wsgi:application --bind 3.134.249.177:8080 --workers 3
+web: gunicorn url_shortener.wsgi:application --bind 0.0.0.0:8080 --workers 3
