@@ -8,11 +8,21 @@ phases:
       - echo Installing dependencies...
       - pip install -r requirements.txt  # Install Python dependencies
 
+  pre_build:
+    commands:
+      - echo Setting environment variables for production...
+      - export DJANGO_SETTINGS_MODULE=my_project.settings.production  # Point to the production settings
+      # You can add any additional environment variable settings here
+
   build:
     commands:
-      - echo Starting the application...
-      - python3 manage.py runserver  # Start the application (you can change this if you need to)
+      - echo Running migrations...
+      - python3 manage.py migrate  # Apply database migrations
+      - echo Collecting static files...
+      - python3 manage.py collectstatic --noinput  # Collect static files for production
+      - echo Starting Gunicorn server...
+      - gunicorn url_shortener.wsgi:application --bind 0.0.0.0:5000 --workers 3  # Run the app with Gunicorn
 
 artifacts:
   files:
-    - '**/*'  # Include all files in the build artifact, change if needed
+    - '**/*'  # Include all files in the build artifact, adjust as needed
