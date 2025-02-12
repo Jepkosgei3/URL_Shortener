@@ -11,13 +11,12 @@ phases:
   pre_build:
     commands:
       - echo Setting environment variables for production...
-      - export DJANGO_SETTINGS_MODULE=my_project.settings.production  # Point to the production settings
+      - export DJANGO_SETTINGS_MODULE=my_project.settings  # Point to the production settings
       # You can add any additional environment variable settings here
 
   build:
     commands:
-      - echo Running migrations...
-      - python3 manage.py migrate  # Apply database migrations
+ # Apply database migrations
       - echo Collecting static files...
       - python3 manage.py collectstatic --noinput  # Collect static files for production
       - echo Starting Gunicorn server...
