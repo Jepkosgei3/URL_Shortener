@@ -11,7 +11,7 @@ phases:
   pre_build:
     commands:
       - echo Setting environment variables for production...
-      - export DJANGO_SETTINGS_MODULE=my_project.settings  # Point to the production settings
+      - export DJANGO_SETTINGS_MODULE=url_shortener.settings  # Point to the production settings
       # You can add any additional environment variable settings here
 
   build:
@@ -19,8 +19,7 @@ phases:
  # Apply database migrations
       - echo Collecting static files...
       - python3 manage.py collectstatic --noinput  # Collect static files for production
-      - echo Starting Gunicorn server...
-      - gunicorn url_shortener.wsgi:application --bind 0.0.0.0:5000 --workers 3  # Run the app with Gunicorn
+    
 
 artifacts:
   files:
