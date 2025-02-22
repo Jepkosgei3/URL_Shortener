@@ -56,7 +56,7 @@
 
     - name: Configure Nginx for Django
       template:
-        src: templates/nginx.conf.j2
+        src: nginx/url_shortener.conf.j2
         dest: /etc/nginx/sites-available/url_shortener
       notify:
         - Reload nginx
