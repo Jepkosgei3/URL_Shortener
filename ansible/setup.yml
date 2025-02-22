@@ -1,0 +1,158 @@
+- name: Setup URL Shortener project with Gunicorn, Nginx, Prometheus, and Grafana
+  hosts: web_server
+  become: true
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        
+    - name: Install Python3, pip, and virtualenv
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - git
+        state: present
+
+    - name: Clone the Django repository
+      git:
+        repo: 'https://github.com/Jepkosgei3/URL_Shortener.git'
+        dest: '/home/ubuntu/URL-Shortener'
+        version: 'main'
+        force: yes
+
+    - name: Create a Python virtual environment
+      command: python3 -m venv /home/ubuntu/URL-Shortener/venv creates=/home/ubuntu/URL-Shortener/venv/bin/activate
+
+    - name: Install requirements from requirements.txt
+      pip:
+        requirements: "/home/ubuntu/URL-Shortener/requirements.txt"
+        virtualenv: "/home/ubuntu/URL-Shortener/venv"
+
+    - name: Ensure Django is installed
+      pip:
+        name: django
+        virtualenv: /home/ubuntu/URL-Shortener/venv
+
+    - name: Run Django collectstatic command
+      shell: |
+         bash -c "source /home/ubuntu/URL-Shortener/venv/bin/activate && python3 /home/ubuntu/URL-Shortener/manage.py collectstatic --noinput"
+      args:
+        chdir: /home/ubuntu/URL-Shortener
+
+    - name: Run Gunicorn to start the Django application
+      shell: |
+        nohup bash -c "source /home/ubuntu/URL-Shortener/venv/bin/activate && gunicorn url_shortener.wsgi:application --bind 0.0.0.0:8000 --workers 3" &
+      args:
+        chdir: /home/ubuntu/URL-Shortener
+      notify:
+        - Restart nginx
+
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Configure Nginx for Django
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/url_shortener
+      notify:
+        - Reload nginx
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/url_shortener
+        dest: /etc/nginx/sites-enabled/url_shortener
+        state: link
+      notify: Reload nginx
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload nginx
+
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+      notify: Reload nginx
+
+    - name: Enable and start Nginx service
+      systemd:
+        name: nginx
+        enabled: yes
+        state: started
+
+    - name: Install Prometheus
+      apt:
+        name: prometheus
+        state: present
+
+    - name: Install curl (required for Grafana GPG key)
+      apt:
+        name: curl
+        state: present
+
+    - name: Add Grafana GPG key via curl
+      shell: |
+        curl -fsSL https://packages.grafana.com/gpg.key | gpg --dearmor -o /etc/apt/trusted.gpg.d/grafana.gpg
+      args:
+        creates: /etc/apt/trusted.gpg.d/grafana.gpg  # Ensures idempotency
+
+    - name: Add Grafana APT repository
+      apt_repository:
+        repo: "deb https://packages.grafana.com/oss/deb stable main"
+        state: present
+        filename: grafana  # Creates separate source list file
+
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+    - name: Install Grafana
+      apt:
+        name: grafana
+        state: present
+
+    - name: Start Prometheus service
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+
+    - name: Start Grafana service
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
+
+    - name: Ensure Prometheus is accessible on port 9090
+      ufw:
+        rule: allow
+        port: '9090'
+        proto: tcp
+
+    - name: Ensure Grafana is accessible on port 3000
+      ufw:
+        rule: allow
+        port: '3000'
+        proto: tcp
+    - name: Allow HTTP traffic
+      ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+
+  handlers:
+    - name: Restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+
+    - name: Reload nginx
+      systemd:
+        name: nginx
+        state: reloaded
